@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultorio - Farmacias Gi</title>
+    
+    <link rel="manifest" href="manifest-doctor.json">
+    <meta name="theme-color" content="#0a2551">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw-doctor.js');
+        });
+      }
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f7f9; padding: 20px; margin: 0; }
+        .panel { max-width: 750px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 25px rgba(10,37,81,0.2); border-left: 10px solid #0a2551; }
+        h2 { color: #0a2551; border-bottom: 4px solid #00bef3; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .turno-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #eee; }
+        .id-paciente { font-size: 2.5rem; font-weight: bold; color: #00bef3; width: 120px; }
+        .btn-atender { background: #0a2551; color: white; border: none; padding: 14px 30px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .logo-panel { max-width: 120px; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>
+            <img src="GI.png" class="logo-panel">
+            <span style="font-size: 0.9rem;">Pacientes en Espera</span>
+        </h2>
+        <div id="contenedorTurnos">Cargando...</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcNsMi4Nx8y1ogbZNUFPhaQyq5TknCLCw",
+            authDomain: "conteo-alimentos-gb.firebaseapp.com",
+            projectId: "conteo-alimentos-gb",
+            databaseURL: "https://conteo-alimentos-gb-default-rtdb.firebaseio.com", 
+            storageBucket: "conteo-alimentos-gb.firebasestorage.app",
+            appId: "1:151719151096:web:0caf53f27e1edde6a4420d"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const hoy = new Date().toISOString().split('T')[0];
+
+        db.ref('turnos_medicos').orderByChild('fecha').equalTo(hoy).on('value', snapshot => {
+            const contenedor = document.getElementById('contenedorTurnos');
+            contenedor.innerHTML = "";
+            const datos = snapshot.val();
+            if (datos) {
+                const lista = Object.keys(datos).map(id => ({ id, ...datos[id] })).filter(t => t.estado === "ESPERA");
+                if (lista.length === 0) {
+                    contenedor.innerHTML = "<p style='text-align:center; padding:20px;'>No hay pacientes pendientes.</p>";
+                } else {
+                    lista.forEach(t => {
+                        contenedor.innerHTML += `
+                            <div class="turno-item">
+                                <div class="id-paciente">${t.numero}</div>
+                                <div style="flex-grow:1; padding-left:15px;"><b>${t.bloque}</b><br><small>${t.horaGenerado}</small></div>
+                                <button class="btn-atender" onclick="confirmarAtencion('${t.id}')">FINALIZAR</button>
+                            </div>`;
+                    });
+                }
+            }
+        });
+
+        function confirmarAtencion(id) {
+            if(confirm("¿Finalizar atención?")) {
+                db.ref('turnos_medicos/' + id).update({ estado: "ATENDIDO", horaFin: new Date().toLocaleTimeString() });
+            }
+        }
+    </script>
+</body>
+</html>
