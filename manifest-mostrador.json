@@ -1,0 +1,21 @@
+{
+  "short_name": "Mostrador Gi",
+  "name": "Mostrador - Farmacias Gi",
+  "icons": [
+    {
+      "src": "GI.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "GI.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/mostrador.html",
+  "display": "standalone",
+  "theme_color": "#0a2551",
+  "background_color": "#f0f7f9",
+  "orientation": "portrait"
+}
