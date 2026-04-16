@@ -10,15 +10,18 @@
 
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f7f9; padding: 20px; color: #0a2551; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 25px rgba(10,37,81,0.2); }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 25px rgba(10,37,81,0.2); }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #00bef3; padding-bottom: 15px; margin-bottom: 20px; }
         .logo { max-width: 120px; }
         
-        /* Dashboard de Totales */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .stat-card { background: #e6f9ff; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #00bef3; }
         .stat-card h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; color: #0a2551; }
         .stat-card p { margin: 10px 0 0 0; font-size: 2rem; font-weight: bold; color: #00bef3; }
+
+        .actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .btn-excel { background-color: #2c3e50; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-excel:hover { background-color: #1a252f; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th { background: #0a2551; color: white; padding: 12px; text-align: left; }
@@ -26,6 +29,7 @@
         .status { font-weight: bold; padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; }
         .espera { background: #fff4e5; color: #b45309; }
         .atendido { background: #dcfce7; color: #15803d; }
+        .reiniciado { background: #f3f4f6; color: #6b7280; text-decoration: line-through; }
     </style>
 </head>
 <body>
@@ -33,78 +37,73 @@
 <div class="container">
     <div class="header">
         <img src="GI.png" class="logo">
-        <h2>Reporte Diario de Turnos</h2>
+        <h2>Panel Administrativo de Turnos</h2>
     </div>
 
     <div class="stats-grid">
-        <div class="stat-card">
-            <h3>Total Hoy</h3>
-            <p id="totalHoy">0</p>
-        </div>
-        <div class="stat-card">
-            <h3>Matutinos</h3>
-            <p id="totalM">0</p>
-        </div>
-        <div class="stat-card">
-            <h3>Vespertinos</h3>
-            <p id="totalV">0</p>
-        </div>
-        <div class="stat-card">
-            <h3>Atendidos</h3>
-            <p id="atendidos">0</p>
-        </div>
+        <div class="stat-card"><h3>Total Hoy</h3><p id="totalHoy">0</p></div>
+        <div class="stat-card"><h3>Matutinos</h3><p id="totalM">0</p></div>
+        <div class="stat-card"><h3>Vespertinos</h3><p id="totalV">0</p></div>
+        <div class="stat-card"><h3>Atendidos</h3><p id="atendidos">0</p></div>
     </div>
 
-    <h3>Detalle de Movimientos</h3>
+    <div class="actions">
+        <h3>Detalle de Movimientos</h3>
+        <button class="btn-excel" onclick="descargarReporte()">📥 DESCARGAR EXCEL DE HOY</button>
+    </div>
+
     <table>
         <thead>
             <tr>
                 <th>Turno</th>
                 <th>Bloque</th>
-                <th>Generado</th>
+                <th>Registro</th>
                 <th>Estado</th>
-                <th>Atención</th>
+                <th>Fin Atención</th>
             </tr>
         </thead>
-        <tbody id="tablaAdmin">
-            </tbody>
+        <tbody id="tablaAdmin"></tbody>
     </table>
 </div>
 
 <script>
     const firebaseConfig = {
-        apiKey: "AIzaSyBcNsMi4Nx8y1ogbZNUFPhaQyq5TknCLCw",
-        authDomain: "conteo-alimentos-gb.firebaseapp.com",
-        projectId: "conteo-alimentos-gb",
-        databaseURL: "https://conteo-alimentos-gb-default-rtdb.firebaseio.com", 
-        storageBucket: "conteo-alimentos-gb.firebasestorage.app",
-        appId: "1:151719151096:web:0caf53f27e1edde6a4420d"
+        apiKey: "AIzaSyACcG9PYAeeZTtyBWhBM2b6XvedVt_WcbE",
+  authDomain: "turnos-fgi.firebaseapp.com",
+  databaseURL: "https://turnos-fgi-default-rtdb.firebaseio.com",
+  projectId: "turnos-fgi",
+  storageBucket: "turnos-fgi.firebasestorage.app",
+  messagingSenderId: "105588370116",
+  appId: "1:105588370116:web:00d59d0c012cd60b053791",
+  measurementId: "G-2MQTCSV75M"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const hoy = new Date().toISOString().split('T')[0];
 
+    // Escucha en tiempo real para el dashboard y tabla
     db.ref('turnos_medicos').orderByChild('fecha').equalTo(hoy).on('value', snapshot => {
         const datos = snapshot.val();
         const tabla = document.getElementById('tablaAdmin');
         tabla.innerHTML = "";
         
-        let total = 0, m = 0, v = 0, atendidos = 0;
+        let total = 0, m = 0, v = 0, aten = 0;
 
         if (datos) {
             const lista = Object.values(datos);
-            total = lista.length;
-            m = lista.filter(t => t.bloque === "MATUTINO").length;
-            v = lista.filter(t => t.bloque === "VESPERTINO").length;
-            atendidos = lista.filter(t => t.estado === "ATENDIDO").length;
+            total = lista.filter(t => t.estado !== "REINICIADO").length;
+            m = lista.filter(t => t.bloque === "MATUTINO" && t.estado !== "REINICIADO").length;
+            v = lista.filter(t => t.bloque === "VESPERTINO" && t.estado !== "REINICIADO").length;
+            aten = lista.filter(t => t.estado === "ATENDIDO").length;
 
             lista.reverse().forEach(t => {
                 const tr = document.createElement('tr');
+                const statusClass = t.estado.toLowerCase();
                 tr.innerHTML = `
                     <td><b>${t.numero}</b></td>
                     <td>${t.bloque}</td>
                     <td>${t.horaGenerado}</td>
-                    <td><span class="status ${t.estado === 'ATENDIDO' ? 'atendido' : 'espera'}">${t.estado}</span></td>
+                    <td><span class="status ${statusClass}">${t.estado}</span></td>
                     <td>${t.horaFin || '--'}</td>
                 `;
                 tabla.appendChild(tr);
@@ -114,8 +113,30 @@
         document.getElementById('totalHoy').textContent = total;
         document.getElementById('totalM').textContent = m;
         document.getElementById('totalV').textContent = v;
-        document.getElementById('atendidos').textContent = atendidos;
+        document.getElementById('atendidos').textContent = aten;
     });
+
+    // Función para exportar a CSV (Excel)
+    function descargarReporte() {
+        db.ref('turnos_medicos').orderByChild('fecha').equalTo(hoy).once('value', (snapshot) => {
+            const datos = snapshot.val();
+            if (!datos) { alert("No hay datos para exportar hoy."); return; }
+
+            let csv = "\ufeffFecha;Turno;Bloque;Hora Registro;Estado;Hora Atendido\n";
+            Object.values(datos).forEach(t => {
+                csv += `${t.fecha};${t.numero};${t.bloque};${t.horaGenerado};${t.estado};${t.horaFin || 'N/A'}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Reporte_Gi_${hoy}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
 </script>
 </body>
 </html>
