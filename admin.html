@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Reporte de Turnos Gi</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f7f9; padding: 20px; color: #0a2551; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 25px rgba(10,37,81,0.2); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #00bef3; padding-bottom: 15px; margin-bottom: 20px; }
+        .logo { max-width: 120px; }
+        
+        /* Dashboard de Totales */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: #e6f9ff; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #00bef3; }
+        .stat-card h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; color: #0a2551; }
+        .stat-card p { margin: 10px 0 0 0; font-size: 2rem; font-weight: bold; color: #00bef3; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th { background: #0a2551; color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .status { font-weight: bold; padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; }
+        .espera { background: #fff4e5; color: #b45309; }
+        .atendido { background: #dcfce7; color: #15803d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="GI.png" class="logo">
+        <h2>Reporte Diario de Turnos</h2>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Hoy</h3>
+            <p id="totalHoy">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Matutinos</h3>
+            <p id="totalM">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Vespertinos</h3>
+            <p id="totalV">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Atendidos</h3>
+            <p id="atendidos">0</p>
+        </div>
+    </div>
+
+    <h3>Detalle de Movimientos</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Turno</th>
+                <th>Bloque</th>
+                <th>Generado</th>
+                <th>Estado</th>
+                <th>Atención</th>
+            </tr>
+        </thead>
+        <tbody id="tablaAdmin">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBcNsMi4Nx8y1ogbZNUFPhaQyq5TknCLCw",
+        authDomain: "conteo-alimentos-gb.firebaseapp.com",
+        projectId: "conteo-alimentos-gb",
+        databaseURL: "https://conteo-alimentos-gb-default-rtdb.firebaseio.com", 
+        storageBucket: "conteo-alimentos-gb.firebasestorage.app",
+        appId: "1:151719151096:web:0caf53f27e1edde6a4420d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const hoy = new Date().toISOString().split('T')[0];
+
+    db.ref('turnos_medicos').orderByChild('fecha').equalTo(hoy).on('value', snapshot => {
+        const datos = snapshot.val();
+        const tabla = document.getElementById('tablaAdmin');
+        tabla.innerHTML = "";
+        
+        let total = 0, m = 0, v = 0, atendidos = 0;
+
+        if (datos) {
+            const lista = Object.values(datos);
+            total = lista.length;
+            m = lista.filter(t => t.bloque === "MATUTINO").length;
+            v = lista.filter(t => t.bloque === "VESPERTINO").length;
+            atendidos = lista.filter(t => t.estado === "ATENDIDO").length;
+
+            lista.reverse().forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><b>${t.numero}</b></td>
+                    <td>${t.bloque}</td>
+                    <td>${t.horaGenerado}</td>
+                    <td><span class="status ${t.estado === 'ATENDIDO' ? 'atendido' : 'espera'}">${t.estado}</span></td>
+                    <td>${t.horaFin || '--'}</td>
+                `;
+                tabla.appendChild(tr);
+            });
+        }
+        
+        document.getElementById('totalHoy').textContent = total;
+        document.getElementById('totalM').textContent = m;
+        document.getElementById('totalV').textContent = v;
+        document.getElementById('atendidos').textContent = atendidos;
+    });
+</script>
+</body>
+</html>
